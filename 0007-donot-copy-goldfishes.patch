@@ -1,0 +1,24 @@
+From 22cf893ac8737b53b6be8d68a4abbbef7489ad1f Mon Sep 17 00:00:00 2001
+From: Erik Castricum <erikcas1972@gmail.com>
+Date: Wed, 3 Jun 2015 16:32:50 +0200
+Subject: [PATCH 7/7] donot copy goldfishes
+
+---
+ target/product/full_base_telephony.mk | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/target/product/full_base_telephony.mk b/target/product/full_base_telephony.mk
+index 2fd2ce8..6dc7799 100644
+--- a/target/product/full_base_telephony.mk
++++ b/target/product/full_base_telephony.mk
+@@ -27,7 +27,6 @@ PRODUCT_PROPERTY_OVERRIDES := \
+     ro.com.android.dataroaming=true
+ 
+ PRODUCT_COPY_FILES := \
+-    device/generic/goldfish/data/etc/apns-conf.xml:system/etc/apns-conf.xml \
+     frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml
+ 
+ $(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base.mk)
+-- 
+1.9.1
+
