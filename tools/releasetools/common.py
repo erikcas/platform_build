@@ -310,57 +310,18 @@ def BuildBootableImage(sourcedir, fs_config_file, info_dict=None):
   assert p1.returncode == 0, "mkbootfs of %s ramdisk failed" % (targetname,)
   assert p2.returncode == 0, "minigzip of %s ramdisk failed" % (targetname,)
 
-  else:
-    # use MKBOOTIMG from environ, or "mkbootimg" if empty or not set
-    mkbootimg = os.getenv('MKBOOTIMG') or "mkbootimg"
-    cmd = [mkbootimg, "--kernel", os.path.join(sourcedir, "kernel")]
+  # use MKBOOTIMG from environ, or "mkbootimg" if empty or not set   mkbootimg = os.getenv('MKBOOTIMG') or "mkbootimg"
+  cmd = [mkbootimg, "--kernel", os.path.join(sourcedir, "kernel")]
 
-    fn = os.path.join(sourcedir, "second")
-    if os.access(fn, os.F_OK):
-      cmd.append("--second")
-      cmd.append(fn)
-
-    fn = os.path.join(sourcedir, "cmdline")
-    if os.access(fn, os.F_OK):
-      cmd.append("--cmdline")
-      cmd.append(open(fn).read().rstrip("\n"))
-
-    fn = os.path.join(sourcedir, "base")
-    if os.access(fn, os.F_OK):
-      cmd.append("--base")
-      cmd.append(open(fn).read().rstrip("\n"))
-
-    fn = os.path.join(sourcedir, "tagsaddr")
-    if os.access(fn, os.F_OK):
-      cmd.append("--tags-addr")
-      cmd.append(open(fn).read().rstrip("\n"))
-
-    fn = os.path.join(sourcedir, "tags_offset")
-    if os.access(fn, os.F_OK):
-      cmd.append("--tags_offset")
-      cmd.append(open(fn).read().rstrip("\n"))
-
-    fn = os.path.join(sourcedir, "ramdisk_offset")
-    if os.access(fn, os.F_OK):
-      cmd.append("--ramdisk_offset")
-      cmd.append(open(fn).read().rstrip("\n"))
-
-    fn = os.path.join(sourcedir, "dt")
-    if os.access(fn, os.F_OK):
-      cmd.append("--dt")
-      cmd.append(fn)
-
-    fn = os.path.join(sourcedir, "pagesize")
-    if os.access(fn, os.F_OK):
-      cmd.append("--pagesize")
-      cmd.append(open(fn).read().rstrip("\n"))
-
-    args = info_dict.get("mkbootimg_args", None)
-    if args and args.strip():
-      cmd.extend(shlex.split(args))
-
-    cmd.extend(["--ramdisk", ramdisk_img.name,
-                "--output", img.name])
+  fn = os.path.join(sourcedir, "second")                             if os.access(fn, os.F_OK):                                           cmd.append("--second")
+    cmd.append(fn)                                                   fn = os.path.join(sourcedir, "cmdline")                            if os.access(fn, os.F_OK):                                           cmd.append("--cmdline")
+    cmd.append(open(fn).read().rstrip("\n"))                       
+  fn = os.path.join(sourcedir, "base")                               if os.access(fn, os.F_OK):                                           cmd.append("--base")
+    cmd.append(open(fn).read().rstrip("\n"))                         fn = os.path.join(sourcedir, "pagesize")                           if os.access(fn, os.F_OK):
+    cmd.append("--pagesize")
+    cmd.append(open(fn).read().rstrip("\n"))                       
+  args = info_dict.get("mkbootimg_args", None)                       if args and args.strip():                                            cmd.extend(shlex.split(args))
+  cmd.extend(["--ramdisk", ramdisk_img.name,                                     "--output", img.name])                               
   p = Run(cmd, stdout=subprocess.PIPE)
   p.communicate()
   assert p.returncode == 0, "mkbootimg of %s image failed" % (
@@ -368,11 +329,11 @@ def BuildBootableImage(sourcedir, fs_config_file, info_dict=None):
 
   if info_dict.get("verity_key", None):
     path = "/" + os.path.basename(sourcedir).lower()
-    cmd = ["boot_signer", path, img.name, info_dict["verity_key"] + ".pk8", info_dict["verity_key"] + ".x509.pem", img.name]
+    cmd = ["boot_signer", path, img.name, info_dict["verity_key"] +
+ ".pk8", info_dict["verity_key"] + ".x509.pem", img.name]
     p = Run(cmd, stdout=subprocess.PIPE)
     p.communicate()
-    assert p.returncode == 0, "boot_signer of %s image failed" % path
-
+    assert p.returncode == 0, "boot_signer of %s image failed" % path                                                                 
   img.seek(os.SEEK_SET, 0)
   data = img.read()
 
@@ -380,7 +341,6 @@ def BuildBootableImage(sourcedir, fs_config_file, info_dict=None):
   img.close()
 
   return data
-
 
 def GetBootableImage(name, prebuilt_name, unpack_dir, tree_subdir,
                      info_dict=None):
