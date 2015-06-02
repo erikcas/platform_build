@@ -143,6 +143,8 @@ def LoadInfoDict(input):
   if "fstab_version" not in d:
     d["fstab_version"] = "1"
 
+  if "device_type" not in d:
+    d["device_type"] = "MMC"
   try:
     data = read_helper("META/imagesizes.txt")
     for line in data.split("\n"):
@@ -170,7 +172,7 @@ def LoadInfoDict(input):
   makeint("boot_size")
   makeint("fstab_version")
 
-  d["fstab"] = LoadRecoveryFSTab(read_helper, d["fstab_version"])
+  d["fstab"] = LoadRecoveryFSTab(read_helper, d["fstab_version"], d["device_type"])
   d["build.prop"] = LoadBuildProp(read_helper)
   return d
 
@@ -192,7 +194,7 @@ def LoadDictionaryFromLines(lines):
       d[name] = value
   return d
 
-def LoadRecoveryFSTab(read_helper, fstab_version):
+def LoadRecoveryFSTab(read_helper, fstab_version, type):
   class Partition(object):
     pass
 
@@ -308,7 +310,7 @@ def BuildBootableImage(sourcedir, fs_config_file, info_dict=None):
   assert p1.returncode == 0, "mkbootfs of %s ramdisk failed" % (targetname,)
   assert p2.returncode == 0, "minigzip of %s ramdisk failed" % (targetname,)
 
-  # use MKBOOTIMG from environ, or "mkbootimg" if empty or not set
+    # use MKBOOTIMG from environ, or "mkbootimg" if empty or not set
   mkbootimg = os.getenv('MKBOOTIMG') or "mkbootimg"
 
   cmd = [mkbootimg, "--kernel", os.path.join(sourcedir, "kernel")]
@@ -374,7 +376,6 @@ def BuildBootableImage(sourcedir, fs_config_file, info_dict=None):
 
   return data
 
-
 def GetBootableImage(name, prebuilt_name, unpack_dir, tree_subdir,
                      info_dict=None):
   """Return a File object (with name 'name') with the desired bootable
@@ -417,6 +418,7 @@ def UnzipTemp(filename, pattern=None):
   OPTIONS.tempfiles.append(tmp)
 
   def unzip_to_dir(filename, dirname):
+    subprocess.call(["rm", "-rf", dirname + filename, "targetfiles-*"])
     cmd = ["unzip", "-o", "-q", filename, "-d", dirname]
     if pattern is not None:
       cmd.append(pattern)
@@ -544,6 +546,7 @@ def CheckSize(data, target, info_dict):
   fs_type = None
   limit = None
   if info_dict["fstab"]:
+    if mount_point == "/userdata_extra": mount_point = "/data"
     if mount_point == "/userdata": mount_point = "/data"
     p = info_dict["fstab"][mount_point]
     fs_type = p.fs_type
@@ -899,6 +902,11 @@ class DeviceSpecificParams(object):
     used to install the image for the device's baseband processor."""
     return self._DoCall("FullOTA_InstallEnd")
 
+  def FullOTA_PostValidate(self):
+    """Called after installing and validating /system; typically this is
+    used to resize the system partition after a block based installation."""
+    return self._DoCall("FullOTA_PostValidate")
+
   def IncrementalOTA_Assertions(self):
     """Called after emitting the block of assertions at the top of an
     incremental OTA package.  Implementations can add whatever
@@ -1164,7 +1172,10 @@ DataImage = blockimgdiff.DataImage
 # map recovery.fstab's fs_types to mount/format "partition types"
 PARTITION_TYPES = { "yaffs2": "MTD", "mtd": "MTD",
                     "ext4": "EMMC", "emmc": "EMMC",
-                    "f2fs": "EMMC" }
+                    "f2fs": "EMMC",
+                    "ext2": "EMMC",
+                    "ext3": "EMMC",
+                    "vfat": "EMMC" }
 
 def GetTypeAndDevice(mount_point, info):
   fstab = info["fstab"]
@@ -1228,6 +1239,10 @@ def MakeRecoveryPatch(input_dir, output_sink, recovery_img, boot_img,
   recovery_type, recovery_device = td_pair
 
   sh = """#!/system/bin/sh
+if [ -f /system/etc/recovery-transform.sh ]; then
+  exec sh /system/etc/recovery-transform.sh %(recovery_size)d %(recovery_sha1)s %(boot_size)d %(boot_sha1)s
+fi
+
 if ! applypatch -c %(recovery_type)s:%(recovery_device)s:%(recovery_size)d:%(recovery_sha1)s; then
   applypatch %(bonus_args)s %(boot_type)s:%(boot_device)s:%(boot_size)d:%(boot_sha1)s %(recovery_type)s:%(recovery_device)s %(recovery_sha1)s %(recovery_size)d %(boot_sha1)s:/system/recovery-from-boot.p && log -t recovery "Installing new recovery image: succeeded" || log -t recovery "Installing new recovery image: failed"
 else
