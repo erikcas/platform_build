@@ -496,7 +496,7 @@ function breakfast()
     CUSTOM_DEVICES_ONLY="true"
     unset LUNCH_MENU_CHOICES
     add_lunch_combo full-eng
-    for f in `/bin/ls vendor/custom/vendorsetup.sh 2> /dev/null`
+    for f in `/bin/ls vendor/aosp/vendorsetup.sh 2> /dev/null`
         do
             echo "including $f"
             . $f
@@ -512,8 +512,8 @@ function breakfast()
             # A buildtype was specified, assume a full device name
             lunch $target
         else
-            # This is probably just the custom model name
-            lunch custom_$target-userdebug
+            # This is probably just the aosp model name
+            lunch aosp_$target-userdebug
         fi
     fi
     return $?
@@ -1686,12 +1686,18 @@ function mka() {
     esac
 }
 
-function set_java_home() {
 # Force JAVA_HOME to point to java 1.7 or java 1.6  if it isn't already set.
 #
 # Note that the MacOS path for java 1.7 includes a minor revision number (sigh).
 # For some reason, installing the JDK doesn't make it show up in the
 # JavaVM.framework/Versions/1.7/ folder.
+function set_java_home() {
+    # Clear the existing JAVA_HOME value if we set it ourselves, so that
+    # we can reset it later, depending on the version of java the build
+    # system needs.
+    #
+    # If we don't do this, the JAVA_HOME value set by the first call to
+    # build/envsetup.sh will persist forever.
     if [ -n "$ANDROID_SET_JAVA_HOME" ]; then
       export JAVA_HOME=""
     fi
@@ -1721,12 +1727,6 @@ function set_java_home() {
       # we can change it on the next envsetup.sh, if required.
       export ANDROID_SET_JAVA_HOME=true
     fi
-}
-
-function repopick() {
-    set_stuff_for_environment
-    T=$(gettop)
-    $T/build/tools/repopick.py $@
 }
 
 # Print colored exit condition
